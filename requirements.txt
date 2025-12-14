@@ -1,4 +1,4 @@
-streamlit==1.32.0
+streamlit
 moviepy==1.0.3
 google-generativeai
 google-api-python-client
