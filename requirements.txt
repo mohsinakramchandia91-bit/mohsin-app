@@ -1,0 +1,14 @@
+streamlit
+pandas
+plotly
+moviepy==1.0.3
+google-generativeai
+google-api-python-client
+google-auth-oauthlib
+instagrapi
+apscheduler
+Pillow
+requests
+pytz
+watchdog
+ffmpeg-python
