@@ -4,12 +4,9 @@ google-generativeai
 google-api-python-client
 google-auth-oauthlib
 pandas
-instagrapi
-APScheduler
-Pillow
-requests
+plotly
+apscheduler
 pytz
 watchdog
-plotly
 ffmpeg-python
 
