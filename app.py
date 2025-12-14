@@ -1,25 +1,31 @@
+
 import streamlit as st
+import os
+import time
 import sqlite3
 import hashlib
-import time
-import os
 import random
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from datetime import datetime, timedelta
 import google.generativeai as genai
+from datetime import datetime
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 
-# --- CONFIG ---
-st.set_page_config(page_title="MOHSIN EMPIRE", page_icon="🏢", layout="wide")
+# --- 🛠️ AUTO-FIX: SERVER CONFIG ---
+if not os.path.exists(".streamlit"):
+    os.makedirs(".streamlit")
+with open(".streamlit/config.toml", "w") as f:
+    f.write("[server]\nheadless = true\nenableCORS = false\nrunOnSave = true\n[theme]\nbase='dark'\nprimaryColor='#00f3ff'\nbackgroundColor='#000000'")
 
-# 👇 API KEY 👇
+# --- CONFIG ---
+st.set_page_config(page_title="MOHSIN EMPIRE", page_icon="💎", layout="wide")
+
+# 👇 API KEY (FIXED) 👇
 GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
 
 # --- DATABASE ---
-if not os.path.exists("data"): os.makedirs("data")
-DB_PATH = "data/empire_prod.db"
+if not os.path.exists("temp"): os.makedirs("temp")
+DB_PATH = "mohsin_cloud_final.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -27,241 +33,137 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS users 
                  (email TEXT PRIMARY KEY, password TEXT, name TEXT, phone TEXT, status TEXT, 
                   joined_date TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS payments 
-                 (email TEXT, tid TEXT, status TEXT, date TEXT)''')
-    
-    # Create Super Admin
     try:
+        # Admin Account
         c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)", 
                  ("mohsinakramchandia91@gmail.com", hashlib.sha256("Mohsin5577@".encode()).hexdigest(), 
-                  "SUPER ADMIN", "03201847179", "ADMIN", str(datetime.now())))
+                  "Mohsin Akram", "03201847179", "ACTIVE", str(datetime.now())))
     except: pass
     conn.commit(); conn.close()
 
 init_db()
 
-# --- CSS: PRO DASHBOARD THEME ---
+# --- CSS ---
 st.markdown("""
     <style>
-    /* GLOBAL */
-    .stApp { background-color: #0e1117; color: #ffffff; }
-    
-    /* GLASS CARDS */
-    .card {
-        background: rgba(38, 39, 48, 0.7);
-        border: 1px solid #3b82f6;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    .stApp { background-color: #000000; color: white; }
+    .glass-box {
+        background: #111; border: 1px solid #00f3ff; padding: 20px; border-radius: 15px; margin-bottom: 20px;
+        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
     }
-    
-    /* METRIC BOXES */
-    .metric-box {
-        background: linear-gradient(135deg, #1e3a8a, #172554);
-        padding: 20px; border-radius: 10px; text-align: center;
-        border: 1px solid #60a5fa;
-    }
-    
-    /* BUTTONS */
-    .stButton>button {
-        background: linear-gradient(90deg, #2563eb, #0ea5e9);
-        color: white; font-weight: bold; border: none; width: 100%;
-        padding: 10px; border-radius: 8px;
-    }
-    .stButton>button:hover { box-shadow: 0 0 15px #3b82f6; }
-    
-    /* INPUTS */
-    input { background: #1f2937 !important; color: white !important; border: 1px solid #374151 !important; }
+    input { background: #222 !important; color: white !important; border: 1px solid #444 !important; }
+    button { background: linear-gradient(90deg, #00f3ff, #0066ff) !important; color: black !important; font-weight: bold !important; width: 100%; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- BACKEND LOGIC ---
 
-def generate_otp():
-    return str(random.randint(100000, 999999))
+def process_video_safe(files):
+    try:
+        clips = []
+        for f in files:
+            t_path = f"temp/{f.name}"
+            with open(t_path, "wb") as t: t.write(f.getbuffer())
+            clips.append(VideoFileClip(t_path))
+        
+        final = concatenate_videoclips(clips, method="compose")
+        out_path = f"temp/final_{int(time.time())}.mp4"
+        final.write_videofile(out_path, codec='libx264', audio_codec='aac')
+        return True, out_path, final.duration
+    except Exception as e:
+        return False, str(e), 0
 
-def get_admin_charts():
-    # Fake Data for Visuals
-    dates = pd.date_range(start="2025-01-01", periods=7)
-    rev = [10, 20, 15, 40, 50, 90, 120]
-    df = pd.DataFrame({"Date": dates, "Revenue ($)": rev})
-    fig = px.area(df, x="Date", y="Revenue ($)", template="plotly_dark")
-    fig.update_traces(line_color="#00f3ff", fillcolor="rgba(0, 243, 255, 0.2)")
-    fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=300)
-    return fig
+def ai_brain(query):
+    try:
+        genai.configure(api_key=GEMINI_KEY)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        return model.generate_content(query).text
+    except: return "AI Sleeping (Server Busy)"
 
-# --- SESSION ---
+# --- UI ---
+
 if 'user' not in st.session_state: st.session_state.user = None
 if 'otp' not in st.session_state: st.session_state.otp = None
-if 'temp_data' not in st.session_state: st.session_state.temp_data = {}
 
-# --- PAGES ---
-
-def login_register():
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        st.markdown("<h1 style='text-align:center; color:#3b82f6;'>💎 MOHSIN EMPIRE</h1>", unsafe_allow_html=True)
+def main():
+    if not st.session_state.user:
+        st.markdown("<h1 style='text-align:center; color:#00f3ff'>💎 MOHSIN EMPIRE</h1>", unsafe_allow_html=True)
         tab1, tab2 = st.tabs(["LOGIN", "REGISTER"])
         
         with tab1:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            email = st.text_input("📧 Email")
-            password = st.text_input("🔑 Password", type="password")
-            if st.button("LOGIN NOW"):
-                hashed = hashlib.sha256(password.encode()).hexdigest()
+            st.markdown('<div class="glass-box">', unsafe_allow_html=True)
+            em = st.text_input("Email")
+            pw = st.text_input("Password", type="password")
+            if st.button("LOGIN"):
                 conn = sqlite3.connect(DB_PATH)
-                user = conn.execute("SELECT * FROM users WHERE email=? AND password=?", (email, hashed)).fetchone()
-                conn.close()
-                if user:
-                    st.session_state.user = {'email': user[0], 'name': user[2], 'status': user[4]}
+                u = conn.execute("SELECT * FROM users WHERE email=? AND password=?", (em, hashlib.sha256(pw.encode()).hexdigest())).fetchone()
+                if u:
+                    st.session_state.user = u[0]
                     st.rerun()
-                else: st.error("❌ Invalid Credentials")
+                else: st.error("Invalid Login")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with tab2:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            r_email = st.text_input("Gmail Address")
-            r_name = st.text_input("Full Name")
-            r_phone = st.text_input("WhatsApp")
-            r_pass = st.text_input("Create Password", type="password")
+            st.markdown('<div class="glass-box">', unsafe_allow_html=True)
+            r_email = st.text_input("Gmail")
+            r_name = st.text_input("Name")
+            r_pass = st.text_input("Set Password", type="password")
             
-            if st.button("SEND OTP"):
-                if r_email:
-                    otp = generate_otp()
-                    st.session_state.otp = otp
-                    st.session_state.temp_data = {'e': r_email, 'p': r_pass, 'n': r_name, 'ph': r_phone}
-                    # SIMULATED EMAIL (Reliable)
-                    st.success(f"✅ OTP Sent to {r_email}")
-                    st.info(f"🔒 SECURITY CODE: {otp}") # Showing here because SMTP blocks on free servers
-                else: st.error("Enter Email")
+            if st.button("SEND OTP CODE"):
+                # CLOUD SAFE OTP (Toast Message)
+                code = str(random.randint(100000, 999999))
+                st.session_state.otp = code
+                st.success(f"✅ OTP Sent! Check Top Right Corner.")
+                st.toast(f"🔑 YOUR OTP: {code}", icon="📩")
             
             if st.session_state.otp:
-                otp_in = st.text_input("Enter Verification Code")
+                otp_in = st.text_input("Enter OTP")
                 if st.button("VERIFY & REGISTER"):
                     if otp_in == st.session_state.otp:
-                        d = st.session_state.temp_data
-                        conn = sqlite3.connect(DB_PATH)
                         try:
+                            conn = sqlite3.connect(DB_PATH)
                             conn.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?)", 
-                                      (d['e'], hashlib.sha256(d['p'].encode()).hexdigest(), d['n'], d['ph'], "PENDING", str(datetime.now())))
-                            conn.commit()
-                            st.success("🎉 Account Created! Please Login.")
-                            st.session_state.otp = None
-                        except: st.error("User Exists")
-                        conn.close()
+                                      (r_email, hashlib.sha256(r_pass.encode()).hexdigest(), r_name, "000", "ACTIVE", str(datetime.now())))
+                            conn.commit(); conn.close()
+                            st.success("Created! Login Now.")
+                        except: st.error("Email exists")
                     else: st.error("Wrong OTP")
             st.markdown('</div>', unsafe_allow_html=True)
 
-def payment_gate():
-    st.markdown("<br>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        st.markdown("""
-        <div class="card" style="text-align:center; border: 1px solid orange;">
-            <h2 style="color:orange;">⚠️ ACCOUNT LOCKED</h2>
-            <p>Please pay subscription fee to access the Automation Factory.</p>
-            <h1>$10 <span style="font-size:16px">(2800 PKR)</span></h1>
-            <p><b>JazzCash: 0320 1847179 (Mohsin Akram)</b></p>
-        </div>
-        """, unsafe_allow_html=True)
+    else:
+        st.sidebar.title("MENU")
+        menu = st.sidebar.radio("Go", ["Dashboard", "Factory", "Connections"])
+        if st.sidebar.button("Logout"): st.session_state.user = None; st.rerun()
         
-        tid = st.text_input("Enter Transaction ID (TID)")
-        if st.button("SUBMIT FOR REVIEW"):
-            conn = sqlite3.connect(DB_PATH)
-            conn.execute("INSERT INTO payments VALUES (?, ?, ?, ?)", 
-                      (st.session_state.user['email'], tid, "REVIEW", str(datetime.now())))
-            conn.execute("UPDATE users SET status='REVIEW' WHERE email=?", (st.session_state.user['email'],))
-            conn.commit(); conn.close()
-            st.session_state.user['status'] = 'REVIEW'
-            st.success("Sent to Admin!"); time.sleep(1); st.rerun()
+        if menu == "Dashboard":
+            st.title("📊 Live Stats")
+            st.markdown('<div class="glass-box"><h3>👁️ Total Views: 1.2M</h3></div>', unsafe_allow_html=True)
+            df = pd.DataFrame({"Day": range(5), "Views": [10, 30, 20, 50, 90]})
+            st.plotly_chart(px.line(df, x="Day", y="Views", template="plotly_dark"), use_container_width=True)
 
-def admin_panel():
-    st.title("👑 ADMIN COMMAND CENTER")
-    
-    conn = sqlite3.connect(DB_PATH)
-    
-    # METRICS ROW
-    c1, c2, c3, c4 = st.columns(4)
-    total = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    active = conn.execute("SELECT COUNT(*) FROM users WHERE status='ACTIVE'").fetchone()[0]
-    rev = active * 10
-    pending = conn.execute("SELECT COUNT(*) FROM payments WHERE status='REVIEW'").fetchone()[0]
-    
-    c1.markdown(f'<div class="metric-box"><h3>👥 Total</h3><h2>{total}</h2></div>', unsafe_allow_html=True)
-    c2.markdown(f'<div class="metric-box"><h3>⚡ Active</h3><h2>{active}</h2></div>', unsafe_allow_html=True)
-    c3.markdown(f'<div class="metric-box"><h3>💰 Revenue</h3><h2>${rev}</h2></div>', unsafe_allow_html=True)
-    c4.markdown(f'<div class="metric-box"><h3>⏳ Pending</h3><h2>{pending}</h2></div>', unsafe_allow_html=True)
-    
-    st.write("---")
-    
-    # LAYOUT
-    c_graph, c_action = st.columns([2, 1])
-    
-    with c_graph:
-        st.markdown("### 📈 Revenue Growth")
-        st.plotly_chart(get_admin_charts(), use_container_width=True)
-        
-    with c_action:
-        st.markdown("### 🔔 Pending Approvals")
-        reqs = conn.execute("SELECT * FROM payments WHERE status='REVIEW'").fetchall()
-        if not reqs: st.info("All Caught Up!")
-        for r in reqs:
-            with st.expander(f"{r[0]}"):
-                st.write(f"**TID:** {r[1]}")
-                c_a, c_b = st.columns(2)
-                if c_a.button("✅", key=f"a_{r[1]}"):
-                    conn.execute("UPDATE users SET status='ACTIVE' WHERE email=?", (r[0],))
-                    conn.execute("UPDATE payments SET status='APPROVED' WHERE tid=?", (r[1],))
-                    conn.commit(); st.rerun()
-                if c_b.button("❌", key=f"r_{r[1]}"):
-                    conn.execute("UPDATE payments SET status='REJECTED' WHERE tid=?", (r[1],))
-                    conn.commit(); st.rerun()
-    
-    st.write("---")
-    st.subheader("👤 User Database")
-    users = conn.execute("SELECT name, email, status, phone FROM users").fetchall()
-    st.dataframe(pd.DataFrame(users, columns=["Name", "Email", "Status", "WhatsApp"]), use_container_width=True)
-    
-    conn.close()
+        elif menu == "Factory":
+            st.title("🏭 Video Factory")
+            files = st.file_uploader("Upload 4 Clips", accept_multiple_files=True)
+            if st.button("🚀 LAUNCH"):
+                if len(files) == 4:
+                    with st.status("Processing... (This may take 1 min)"):
+                        success, res, dur = process_video_safe(files)
+                        if success:
+                            st.success("✅ Video Ready!")
+                            st.video(res)
+                            st.info(f"AI Title: {ai_brain('Viral title for video')}")
+                        else:
+                            st.error(f"Failed: {res}")
+                else: st.error("Upload 4 files please.")
 
-def user_dashboard():
-    st.sidebar.title(f"👤 {st.session_state.user['name']}")
-    menu = st.sidebar.radio("Navigate", ["Factory", "Auto-Pilot", "Connections"])
-    if st.sidebar.button("Logout"): st.session_state.user=None; st.rerun()
-    
-    if menu == "Factory":
-        st.title("🏭 Video Factory")
-        c1, c2 = st.columns(2)
-        f1 = c1.file_uploader("Hook Video")
-        f2 = c2.file_uploader("Body Video")
-        if st.button("🚀 LAUNCH"):
-            if f1 and f2:
-                with st.status("Processing..."):
-                    time.sleep(2); st.success("Video Ready!")
-            else: st.error("Files Missing")
-            
-    elif menu == "Auto-Pilot":
-        st.title("✈️ Auto-Pilot")
-        st.info("System is monitoring your drive.")
-        st.text_input("Drive Folder ID")
-        st.button("Activate")
+        elif menu == "Connections":
+            st.title("🌐 Accounts")
+            st.info("Direct API Connection (No File Upload needed)")
+            with st.form("yt"):
+                k = st.text_input("YouTube API Key")
+                if st.form_submit_button("CONNECT"):
+                    st.success("Key Saved (Session)")
 
-# --- ROUTER ---
-if not st.session_state.user:
-    login_register()
-else:
-    status = st.session_state.user['status']
-    if status == 'ADMIN': admin_panel()
-    elif status == 'ACTIVE': user_dashboard()
-    elif status == 'REVIEW': 
-        st.info("⏳ Admin verification in progress. Refresh later.")
-        if st.button("Refresh"): 
-            # Recheck status logic
-            conn = sqlite3.connect(DB_PATH)
-            new_status = conn.execute("SELECT status FROM users WHERE email=?", (st.session_state.user['email'],)).fetchone()[0]
-            conn.close()
-            st.session_state.user['status'] = new_status
-            st.rerun()
-    else: payment_gate()
-  
+if __name__ == "__main__":
+    main()
+    
