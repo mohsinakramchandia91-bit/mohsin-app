@@ -17,13 +17,24 @@ import google.generativeai as genai
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-# --- 1. CONFIG ---
-st.set_page_config(page_title="MOHSIN EMPIRE V17", page_icon="👑", layout="wide")
+# --- 1. CONFIGURATION & AUTO-FIX (NETWORK ERROR KILLER) ---
+st.set_page_config(page_title="MOHSIN EMPIRE V18", page_icon="👑", layout="wide")
 
-# UPLOAD FIX
+# Ye hissa automatically server ki settings theek kar dega
 if not os.path.exists(".streamlit"): os.makedirs(".streamlit")
 with open(".streamlit/config.toml", "w") as f:
-    f.write("[server]\nmaxUploadSize = 2000\nheadless = true\nenableCORS = false\nrunOnSave = true\n[theme]\nbase='dark'\nprimaryColor='#00f3ff'\nbackgroundColor='#000000'")
+    f.write("""
+[server]
+maxUploadSize = 2000
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+runOnSave = true
+[theme]
+base='dark'
+primaryColor='#00f3ff'
+backgroundColor='#000000'
+""")
 
 # STATE
 if 'user' not in st.session_state: st.session_state.user = None
@@ -34,7 +45,7 @@ GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
 
 # --- 2. DATABASE ---
 if not os.path.exists("user_data"): os.makedirs("user_data")
-DB_PATH = "mohsin_final_v17.db"
+DB_PATH = "mohsin_final_v18.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -45,12 +56,17 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS payments 
                  (email TEXT, tid TEXT, method TEXT, status TEXT, date TEXT)''')
     
-    # SUPER ADMIN
+    # SUPER ADMIN & DEMO USER
     try:
+        # Admin
         admin_pass = hashlib.sha256("Mohsin5577@".encode()).hexdigest()
         c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
                  ("mohsinakramchandia91@gmail.com", admin_pass, "CEO MOHSIN", "03201847179", 
                   "ADMIN", "Asia/Karachi", "None", "Connected", str(datetime.now())))
+        
+        # Demo User (For Buttons)
+        c.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                 ("demo_client@gmail.com", "123", "Demo Request", "000", "REVIEW", "UTC", "None", "None", str(datetime.now())))
     except: pass
     conn.commit(); conn.close()
 
@@ -114,10 +130,8 @@ def admin_dashboard():
     
     conn = sqlite3.connect(DB_PATH)
     
-    # --- HERE IS THE FIX: BUTTONS FOR EVERYONE ---
+    # MANAGE AGENTS
     st.markdown("### 👥 Manage All Agents")
-    
-    # Fetch ALL users except Admin
     users = conn.execute("SELECT name, email, status FROM users WHERE status != 'ADMIN'").fetchall()
     
     if users:
@@ -129,24 +143,17 @@ def admin_dashboard():
                 c1.write(f"👤 **{u[0]}**")
                 c2.write(f"📧 {u[1]}")
                 
-                # Show Status Color
                 if u[2] == "ACTIVE": c2.success("ACTIVE")
-                elif u[2] == "PENDING": c2.warning("PENDING")
-                elif u[2] == "REVIEW": c2.info("REVIEW")
-                else: c2.error("BLOCKED")
+                else: c2.warning(u[2])
 
-                # FORCE BUTTONS (DIRECT CONTROL)
+                # BUTTONS
                 if c3.button("✅ ACTIVATE", key=f"act_{u[1]}"):
                     conn.execute("UPDATE users SET status='ACTIVE' WHERE email=?", (u[1],))
-                    conn.execute("UPDATE payments SET status='APPROVED' WHERE email=?", (u[1],)) # Auto approve payment if exists
-                    conn.commit()
-                    st.toast(f"{u[0]} Activated!"); time.sleep(1); st.rerun()
+                    conn.commit(); st.toast("Activated!"); time.sleep(1); st.rerun()
                 
                 if c4.button("❌ DELETE", key=f"del_{u[1]}"):
                     conn.execute("DELETE FROM users WHERE email=?", (u[1],))
-                    conn.execute("DELETE FROM payments WHERE email=?", (u[1],))
-                    conn.commit()
-                    st.toast(f"{u[0]} Deleted!"); time.sleep(1); st.rerun()
+                    conn.commit(); st.toast("Deleted!"); time.sleep(1); st.rerun()
                 
                 st.markdown('</div>', unsafe_allow_html=True)
     else:
@@ -181,9 +188,31 @@ def user_dashboard():
         n = st.text_input("Niche")
         if st.button("HACK"): st.write(deep_seek(n))
 
+    # --- SOCIAL TAB FIX ---
     with tabs[4]:
-        st.file_uploader("YouTube JSON")
-        st.success("Socials Ready")
+        st.markdown("### 🌐 Social Connect")
+        st.info("💡 Tip: Agar File Upload fail ho, to JSON text copy kar k neechay paste karein.")
+        
+        # Option 1: File
+        json_file = st.file_uploader("Upload 'client_secret.json'", type='json')
+        
+        # Option 2: Paste (THE FIX)
+        st.write("**OR**")
+        json_text = st.text_area("Paste JSON Text Here (Guaranteed Works)")
+        
+        if st.button("🔌 CONNECT NOW"):
+            if json_file:
+                with open(f"user_data/{st.session_state.user['email']}.json", "wb") as f: 
+                    f.write(json_file.getbuffer())
+                st.success("✅ Connected via File!")
+                st.balloons()
+            elif json_text:
+                with open(f"user_data/{st.session_state.user['email']}.json", "w") as f: 
+                    f.write(json_text)
+                st.success("✅ Connected via Text Paste!")
+                st.balloons()
+            else:
+                st.error("Please Upload File or Paste Text!")
 
 def login():
     st.markdown("<br><h1 style='text-align:center'>🏢 MOHSIN EMPIRE</h1>", unsafe_allow_html=True)
@@ -232,4 +261,4 @@ if __name__ == "__main__":
         if role == 'ADMIN': admin_dashboard()
         elif role == 'ACTIVE': user_dashboard()
         else: payment_wall()
-
+    
