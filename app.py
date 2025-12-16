@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import time
 import tempfile
+import numpy as np # <--- FIXED: Added NumPy explicitly
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,10 +12,10 @@ import google.generativeai as genai
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-# --- 1. SUPER CONFIG (AXIOS ERROR KILLER) ---
-st.set_page_config(page_title="MOHSIN EMPIRE PRO", page_icon="💎", layout="wide")
+# --- 1. SUPER CONFIG (NO ERRORS) ---
+st.set_page_config(page_title="MOHSIN EMPIRE PRO", page_icon="🏢", layout="wide")
 
-# Force create config to stop Network Errors
+# Force Config
 if not os.path.exists(".streamlit"): os.makedirs(".streamlit")
 with open(".streamlit/config.toml", "w") as f:
     f.write("""
@@ -35,74 +36,72 @@ textColor='#ffffff'
 # API KEY
 GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
 
-# --- 2. CSS: ULTRA SLEEK & SOFT GLOW UI ---
+# --- 2. CSS: VERTICAL MENU & NEON UI ---
 st.markdown("""
     <style>
-    /* DEEP BLACK BACKGROUND */
+    /* MAIN BACKGROUND */
     .stApp { background-color: #050505 !important; }
     
-    /* REMOVE WHITE BORDERS */
-    header, .css-18ni7ap { background-color: rgba(0,0,0,0) !important; }
+    /* SIDEBAR STYLE (VERTICAL MENU) */
+    section[data-testid="stSidebar"] {
+        background-color: #0a0a0a;
+        border-right: 1px solid #333;
+    }
     
-    /* SOFT GLOWING BUTTONS (The Requirement) */
+    /* RADIO BUTTONS AS MENU ITEMS */
+    div.row-widget.stRadio > div {
+        background-color: transparent;
+    }
+    div.row-widget.stRadio > div[role="radiogroup"] > label {
+        background-color: #111;
+        border: 1px solid #333;
+        padding: 15px;
+        margin-bottom: 5px;
+        border-radius: 10px;
+        color: #888;
+        transition: 0.3s;
+        cursor: pointer;
+        width: 100%;
+        display: block;
+    }
+    div.row-widget.stRadio > div[role="radiogroup"] > label:hover {
+        border-color: #00f3ff;
+        color: #fff;
+        transform: translateX(5px);
+    }
+    div.row-widget.stRadio > div[role="radiogroup"] > label[data-baseweb="radio"] {
+        background: linear-gradient(90deg, #00f3ff, #0066ff) !important;
+        color: black !important;
+        font-weight: bold;
+        border: none;
+        box-shadow: 0 0 15px #00f3ff;
+    }
+
+    /* ACTION BUTTONS */
     .stButton>button {
         background: linear-gradient(145deg, #1a1a1a, #222222);
         color: #00f3ff;
         border: 1px solid #333;
-        border-radius: 15px;
-        padding: 15px 25px;
-        font-size: 16px;
+        border-radius: 12px;
+        padding: 15px;
         font-weight: bold;
         letter-spacing: 1px;
-        box-shadow: 5px 5px 15px #000000, -5px -5px 15px #222;
-        transition: all 0.3s ease-in-out;
+        transition: all 0.3s ease;
         width: 100%;
-        text-transform: uppercase;
     }
-    
-    /* BUTTON TOUCH EFFECT (Base to Up Light) */
     .stButton>button:hover {
-        background: linear-gradient(180deg, #00f3ff, #0066ff);
+        background: linear-gradient(90deg, #00f3ff, #0066ff);
         color: black;
-        box-shadow: 0 0 25px #00f3ff, 0 0 50px #00f3ff;
-        transform: translateY(-3px);
-        border: none;
-    }
-    .stButton>button:active {
-        transform: translateY(1px);
-        box-shadow: inset 5px 5px 10px #003366, inset -5px -5px 10px #003366;
+        box-shadow: 0 0 20px #00f3ff;
+        transform: translateY(-2px);
     }
 
-    /* GLASS INPUT FIELDS */
-    .stTextInput>div>div>input, .stSelectbox>div>div>div, .stTextArea>div>div>textarea {
-        background-color: #0a0a0a !important;
+    /* INPUTS */
+    .stTextInput>div>div>input, .stSelectbox>div>div>div {
+        background-color: #0f0f0f !important;
         color: #00f3ff !important;
         border: 1px solid #333 !important;
-        border-radius: 10px;
-    }
-    .stTextInput>div>div>input:focus {
-        border-color: #00f3ff !important;
-        box-shadow: 0 0 15px rgba(0, 243, 255, 0.2) !important;
-    }
-
-    /* TABS DESIGN */
-    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #111; border-radius: 8px; color: #666;
-    }
-    .stTabs [aria-selected="true"] {
-        background-color: #00f3ff !important; color: black !important; font-weight: 900;
-        box-shadow: 0 0 15px #00f3ff;
-    }
-    
-    /* CUSTOM CONTAINERS */
-    .glass-box {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 15px;
-        padding: 20px;
-        backdrop-filter: blur(10px);
-        margin-bottom: 20px;
+        border-radius: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -121,13 +120,12 @@ def drive_bot_processor(files, ratio):
         clips = []
         temps = []
         for f in files:
-            # System Temp File (Fixes Upload Error)
             t = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
             t.write(f.read())
             temps.append(t.name)
-            
             clip = VideoFileClip(t.name)
-            # Auto-Resize Logic
+            
+            # Auto-Resize
             if ratio == "9:16 (Shorts)":
                 w, h = clip.size
                 if w > h:
@@ -147,35 +145,46 @@ def drive_bot_processor(files, ratio):
     except Exception as e: return str(e)
 
 def get_3d_studio():
-    np.random.seed(42)
+    # FIXED: NumPy is now imported correctly
+    np.random.seed(42) 
     df = pd.DataFrame(np.random.randint(100, 1000, size=(30, 3)), columns=['Viral', 'Retention', 'CTR'])
     fig = px.scatter_3d(df, x='Viral', y='Retention', z='CTR', color='Viral', template="plotly_dark", title="🔥 LIVE 3D PREDICTION")
-    fig.update_layout(margin=dict(l=0, r=0, b=0, t=30), height=400)
+    fig.update_layout(margin=dict(l=0, r=0, b=0, t=30), height=500)
     return fig
 
-# --- 4. MAIN SYSTEM (NO LOGIN) ---
+# --- 4. MAIN SYSTEM (VERTICAL NAV) ---
 
 def main():
-    st.markdown("<h1 style='text-align:center; font-size: 3.5em; text-shadow: 0 0 30px #00f3ff; color:white;'>🏢 MOHSIN EMPIRE</h1>", unsafe_allow_html=True)
+    # SIDEBAR NAVIGATION (VERTICAL)
+    with st.sidebar:
+        st.markdown("<h2 style='text-align:center; color:#00f3ff;'>🏢 MOHSIN<br>EMPIRE</h2>", unsafe_allow_html=True)
+        st.write("---")
+        menu = st.radio("NAVIGATION COMMANDS", [
+            "📊 3D STUDIO", 
+            "📹 YOUTUBE LINK", 
+            "📸 INSTAGRAM", 
+            "📘 FACEBOOK", 
+            "🎵 TIKTOK", 
+            "🤖 TREND LIBRARY", 
+            "☁️ DRIVE BOT", 
+            "🧠 HACKER SEO", 
+            "⏰ SCHEDULER", 
+            "⚙️ SETTINGS"
+        ])
+        st.write("---")
+        st.info("🟢 System: ONLINE")
+
+    # MAIN CONTENT AREA
     
-    # THE 10 TABS (FREEDOM EDITION)
-    tabs = st.tabs([
-        "📊 3D STUDIO", "📹 YOUTUBE", "📸 INSTA", "📘 FACEBOOK", "🎵 TIKTOK", 
-        "🤖 LIBRARY", "☁️ DRIVE BOT", "🧠 HACKER SEO", "⏰ SCHEDULER", "⚙️ SETTINGS"
-    ])
+    if menu == "📊 3D STUDIO":
+        st.title("📊 Live 3D Analytics Studio")
+        st.plotly_chart(get_3d_studio(), use_container_width=True)
+        c1, c2 = st.columns(2)
+        c1.metric("Realtime Views", "1.2M", "+12%")
+        c2.metric("Revenue (Est)", "$4,500", "+5%")
 
-    # 1. STUDIO
-    with tabs[0]:
-        st.markdown("### 📊 Live 3D Analytics")
-        c1, c2 = st.columns([3, 1])
-        with c1: st.plotly_chart(get_3d_studio(), use_container_width=True)
-        with c2:
-            st.markdown('<div class="glass-box"><h2 style="color:#00f3ff">1.2M</h2><p>Realtime Views</p></div>', unsafe_allow_html=True)
-            st.markdown('<div class="glass-box"><h2 style="color:#00ff00">$4,500</h2><p>Est. Revenue</p></div>', unsafe_allow_html=True)
-
-    # 2. YOUTUBE
-    with tabs[1]:
-        st.markdown("### 📹 YouTube Link")
+    elif menu == "📹 YOUTUBE LINK":
+        st.title("📹 YouTube Connection Hub")
         st.info("Paste Channel Link to Auto-Fetch Logo & Name")
         c1, c2 = st.columns(2)
         with c1: st.file_uploader("Upload Secret JSON")
@@ -183,37 +192,32 @@ def main():
         if st.button("🔗 CONNECT YOUTUBE"):
             st.success("✅ Channel Fetched Successfully!")
 
-    # 3. INSTAGRAM
-    with tabs[2]:
-        st.markdown("### 📸 Instagram Link")
+    elif menu == "📸 INSTAGRAM":
+        st.title("📸 Instagram Secure Link")
         c1, c2 = st.columns(2)
         c1.text_input("Username")
         c2.text_input("Password", type="password")
         if st.button("🔗 CONNECT INSTAGRAM"): st.success("Connected!")
 
-    # 4. FACEBOOK
-    with tabs[3]:
-        st.markdown("### 📘 Facebook Connect")
+    elif menu == "📘 FACEBOOK":
+        st.title("📘 Facebook API Gateway")
         st.text_input("FB Page API Key")
-        st.button("🔗 SYNC FACEBOOK")
+        st.button("🔗 SYNC FACEBOOK PAGE")
 
-    # 5. TIKTOK
-    with tabs[4]:
-        st.markdown("### 🎵 TikTok Integration")
-        st.text_input("TikTok Key")
-        st.button("🔗 LINK TIKTOK")
+    elif menu == "🎵 TIKTOK":
+        st.title("🎵 TikTok Integration")
+        st.text_input("TikTok Developer Key")
+        st.button("🔗 LINK TIKTOK ACCOUNT")
 
-    # 6. LIBRARY
-    with tabs[5]:
-        st.markdown("### 🤖 Trending Library")
-        st.info("Auto-Pilot fetched these viral topics today:")
-        topics = ["DeepSeek AI Hacks", "SpaceX Starship", "Viral Gadgets 2025"]
+    elif menu == "🤖 TREND LIBRARY":
+        st.title("🤖 Autopilot Trend Library")
+        st.success("Auto-Pilot fetched these viral topics today:")
+        topics = ["DeepSeek AI Hacks", "SpaceX Starship", "Viral Gadgets 2025", "Crypto Bull Run"]
         for t in topics:
-            st.markdown(f'<div class="glass-box">🔥 {t}</div>', unsafe_allow_html=True)
+            st.warning(f"🔥 {t}")
 
-    # 7. DRIVE BOT (THE HEAVY LIFTER)
-    with tabs[6]:
-        st.markdown("### ☁️ Drive Bot (Auto-Edit & Upload)")
+    elif menu == "☁️ DRIVE BOT":
+        st.title("☁️ Drive Bot (Auto-Edit & Upload)")
         st.info("Upload unlimited parts. Bot will join and resize them.")
         
         folder = st.text_input("Drive Folder ID")
@@ -229,27 +233,25 @@ def main():
                         st.video(res)
                     else: st.error(res)
 
-    # 8. HACKER SEO
-    with tabs[7]:
-        st.markdown("### 🧠 Hacker SEO")
+    elif menu == "🧠 HACKER SEO":
+        st.title("🧠 Hacker SEO Engine")
         niche = st.text_input("Target Niche")
         plat = st.selectbox("Platform", ["YouTube", "TikTok"])
         if st.button("🔓 BREAK ALGORITHM"):
             st.code(hacker_seo(niche, plat))
 
-    # 9. SCHEDULER
-    with tabs[8]:
-        st.markdown("### ⏰ Global Timezone Scheduler")
+    elif menu == "⏰ SCHEDULER":
+        st.title("⏰ Global Timezone Scheduler")
         tz = st.selectbox("Select Timezone", pytz.all_timezones)
         st.info(f"Best Upload Time for {tz}: 06:00 PM")
-        if st.button("📅 AUTO-SCHEDULE ALL"): st.success("Scheduled!")
+        if st.button("📅 AUTO-SCHEDULE ALL POSTS"): st.success("Scheduled!")
 
-    # 10. SETTINGS
-    with tabs[9]:
-        st.markdown("### ⚙️ System Config")
-        st.write("Current Ver: Freedom V2")
+    elif menu == "⚙️ SETTINGS":
+        st.title("⚙️ System Configuration")
+        st.write("Current Ver: Freedom V3 (Vertical)")
         st.write("Storage: 5GB Max")
+        st.button("CLEAR CACHE")
 
 if __name__ == "__main__":
     main()
-        
+
