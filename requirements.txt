@@ -4,4 +4,6 @@ google-generativeai
 pandas
 plotly
 numpy
+pytz
+
 
