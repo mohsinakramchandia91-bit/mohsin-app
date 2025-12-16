@@ -1,14 +1,10 @@
-streamlit==1.32.0
-moviepy==1.0.3
+streamlit
+moviepy
 google-generativeai
-google-api-python-client
-google-auth-oauthlib
 pandas
 plotly
 apscheduler
 pytz
-watchdog
-ffmpeg-python
 scikit-learn
 numpy
 
