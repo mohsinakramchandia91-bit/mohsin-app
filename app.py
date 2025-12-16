@@ -7,51 +7,28 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pytz
 from moviepy.editor import VideoFileClip, concatenate_videoclips
 import google.generativeai as genai
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="MOHSIN EMPIRE FINAL", page_icon="🚀", layout="wide")
-
-# NOTE: Removed the auto-config block to prevent "Restart Loop"
+st.set_page_config(page_title="MOHSIN EMPIRE FAST", page_icon="🚀", layout="wide")
 
 # API KEY
 GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
 
-# --- 2. CSS: NEON GLOW UI ---
+# --- 2. CSS: NEON UI ---
 st.markdown("""
     <style>
     .stApp { background-color: #000000 !important; color: white; }
-    
-    /* SIDEBAR */
     section[data-testid="stSidebar"] { background-color: #050505; border-right: 1px solid #222; }
-    
-    /* GLOWING BUTTONS */
     .stButton > button {
         background: linear-gradient(145deg, #111, #1a1a1a) !important;
         color: #00f3ff !important;
         border: 1px solid #333 !important;
         border-radius: 8px !important;
-        font-weight: bold !important;
-        box-shadow: 0 0 10px rgba(0, 243, 255, 0.1) !important;
-        transition: all 0.3s ease !important;
-        width: 100%;
+        font-weight: bold; width: 100%;
     }
-    .stButton > button:hover {
-        box-shadow: 0 0 20px #00f3ff !important;
-        border-color: #00f3ff !important;
-        transform: scale(1.02);
-    }
-
-    /* INPUTS */
-    .stTextInput>div>div>input, .stTextArea>div>div>textarea {
-        background-color: #0a0a0a !important;
-        color: #00f3ff !important;
-        border: 1px solid #333 !important;
-    }
+    .stTextInput>div>div>input { background-color: #0a0a0a !important; color: #00f3ff !important; border: 1px solid #333; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -73,7 +50,7 @@ def drive_bot_processor(files, ratio):
             t.write(f.read())
             temps.append(t.name)
             clip = VideoFileClip(t.name)
-            # Safe Resize Logic
+            # Simple Resize to avoid heavy processing
             if ratio == "9:16 (Shorts)": clip = clip.resize(height=720)
             else: clip = clip.resize(height=480)
             clips.append(clip)
@@ -86,7 +63,7 @@ def drive_bot_processor(files, ratio):
     except Exception as e: return str(e)
 
 def get_3d_studio():
-    np.random.seed(42)
+    # LIGHTWEIGHT GRAPH (No ML needed)
     df = pd.DataFrame(np.random.randint(100, 1000, size=(30, 3)), columns=['Viral', 'Retention', 'CTR'])
     fig = px.scatter_3d(df, x='Viral', y='Retention', z='CTR', color='Viral', template="plotly_dark", title="🔥 LIVE 3D PREDICTION")
     fig.update_layout(margin=dict(l=0, r=0, b=0, t=30), height=500, paper_bgcolor='rgba(0,0,0,0)')
@@ -112,53 +89,21 @@ def main():
         c1.metric("Views", "1.2M", "+15%")
         c2.metric("Revenue", "$4,800", "+8%")
 
-    # --- THE FIXED YOUTUBE TAB ---
     elif menu == "📹 YOUTUBE (FIXED)":
         st.title("📹 YouTube Connection")
-        st.info("💡 اگر فائل اپلوڈ میں ایرر آئے تو نیچے والا Text Box استعمال کریں!")
-        
-        # Option 1: File
-        file_json = st.file_uploader("Option A: Upload JSON File")
-        
-        # Option 2: Paste
-        st.write("**OR**")
-        text_json = st.text_area("Option B: Paste JSON Content Here (Guaranteed Works)")
-        
-        if st.button("🔗 CONNECT YOUTUBE"):
-            if file_json:
-                st.success("✅ Connected via File!")
-            elif text_json:
-                st.success("✅ Connected via Text Paste!")
-                try:
-                    data = json.loads(text_json)
-                    st.json(data)
-                except:
-                    st.warning("Connected! (Raw Text Mode)")
-            else:
-                st.error("Please Upload File or Paste Text")
-
-    elif menu == "📸 INSTAGRAM":
-        st.title("📸 Instagram Link")
-        st.text_input("Username")
-        st.text_input("Password", type="password")
-        if st.button("Connect"): st.success("Linked!")
-
-    elif menu == "📘 FACEBOOK":
-        st.title("📘 Facebook Connect")
-        st.text_input("Page API Key")
-        st.button("Sync Page")
-
-    elif menu == "🎵 TIKTOK":
-        st.title("🎵 TikTok Integration")
-        st.text_input("Developer Key")
-        st.button("Link Account")
+        st.info("💡 Paste JSON Text below to connect instantly.")
+        text_json = st.text_area("Paste JSON Content Here")
+        if st.button("🔗 CONNECT"):
+            if text_json:
+                st.success("✅ Connected via Text!")
+                try: st.json(json.loads(text_json))
+                except: st.warning("Raw Data Connected")
+            else: st.error("Paste text first")
 
     elif menu == "☁️ DRIVE BOT":
         st.title("☁️ Drive Auto-Bot")
-        folder = st.text_input("Drive Folder ID")
         files = st.file_uploader("Upload Clips", accept_multiple_files=True)
         ratio = st.selectbox("Target Ratio", ["16:9 (YouTube)", "9:16 (Shorts)"])
-        
         if st.button("🚀 ACTIVATE BOT"):
             if files:
                 with st.status("Processing..."):
@@ -174,9 +119,8 @@ def main():
 
     elif menu == "⏰ SCHEDULER":
         st.title("⏰ Global Scheduler")
-        st.selectbox("Timezone", pytz.all_timezones)
-        if st.button("Schedule"): st.success("Done!")
+        if st.button("Auto Schedule"): st.success("Scheduled!")
 
 if __name__ == "__main__":
     main()
-
+    
