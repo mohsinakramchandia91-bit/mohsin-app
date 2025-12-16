@@ -3,8 +3,5 @@ moviepy
 google-generativeai
 pandas
 plotly
-apscheduler
-pytz
-scikit-learn
 numpy
 
