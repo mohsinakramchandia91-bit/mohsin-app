@@ -1,4 +1,4 @@
-    import streamlit as st
+import streamlit as st
 import os
 import time
 import random
@@ -100,18 +100,23 @@ st.markdown("""
 
 # --- 3. INTELLIGENCE ENGINES ---
 
-# REQ 8: HACKER SEO AI
+# REQ 8: HACKER SEO AI (IMPROVED FOR VIRALITY)
 def hacker_seo_engine(niche, platform):
     try:
         genai.configure(api_key=GEMINI_KEY)
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
-        Act as a Black Hat SEO Hacker. Break the algorithm of {platform} for the niche '{niche}'.
-        1. [KILLER TITLE]: High CTR, Clickbait.
-        2. [DESCRIPTION HACK]: Psychological hook + SEO keywords.
-        3. [ALGORITHM TAGS]: 10 hidden tags competitors miss.
-        4. [THUMBNAIL PROMPT]: Visual instructions for high click rate.
-        Output as a clean JSON-like dashboard.
+        Act as a VIRAL YouTube Shorts & TikTok Strategist.
+        Topic: '{niche}'.
+        
+        DO NOT give boring titles like "The Life of a Bird".
+        INSTEAD, generate:
+        1. [CLICKBAIT TITLE]: Must trigger curiosity (e.g., "Is this Alien Real?").
+        2. [FIRST 3 SECONDS HOOK]: What text to put on screen.
+        3. [HIDDEN TAGS]: High volume search terms.
+        4. [DESCRIPTION]: Optimized for algorithm.
+        
+        Output format: JSON.
         """
         return model.generate_content(prompt).text
     except: return "⚠️ AI Network Busy. Using Cached Hacker Strategy."
@@ -137,6 +142,7 @@ def intelligent_video_processor(files, platform_ratio):
                 
                 if current_ratio > target_ratio:
                     new_w = h * target_ratio
+                    # Center crop
                     clip = clip.crop(x1=w/2 - new_w/2, width=new_w, height=h)
                 
                 clip = clip.resize(height=1080) # HD Vertical
@@ -202,7 +208,7 @@ def main_system():
             st.text_input("Paste Original Channel Link (For Fetching Logo/Name)")
         
         if st.button("🔗 LINK YOUTUBE CHANNEL"):
-            st.success("✅ Channel Fetched: Mohsin Empire (Official)")
+            st.success("✅ Channel Fetched: The 8K Loop (Official)")
             st.image("https://cdn-icons-png.flaticon.com/512/1384/1384060.png", width=50)
 
     # 3. INSTAGRAM (REQ 3)
@@ -240,6 +246,8 @@ def main_system():
     # 7. DRIVE BOT (REQ 7 - THE HEAVY LIFTER)
     with tabs[6]:
         st.markdown("### ☁️ Drive Auto-Bot (Editor & Uploader)")
+        st.info("Upload multiple clips. The bot will COMBINE them and RESIZE them automatically.")
+        
         folder = st.text_input("Google Drive Folder ID (Files Location)")
         
         c_up, c_ratio = st.columns(2)
@@ -262,7 +270,7 @@ def main_system():
     # 8. HACKER SEO (REQ 8)
     with tabs[7]:
         st.markdown("### 🧠 Hacker SEO Engine")
-        niche = st.text_input("Target Video Topic")
+        niche = st.text_input("Target Video Topic (e.g. Rare Bird)")
         plat = st.selectbox("Platform", ["YouTube", "Instagram", "TikTok"])
         if st.button("🔓 BREAK ALGORITHM"):
             st.code(hacker_seo_engine(niche, plat), language='json')
