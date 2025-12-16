@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import time
 import tempfile
+import json  # <--- YEH WOH MISSING LINE THI JO ERROR DE RAHI THI
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -13,9 +14,9 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="MOHSIN EMPIRE FIXED", page_icon="🏢", layout="wide")
+st.set_page_config(page_title="MOHSIN EMPIRE FIXED", page_icon="💎", layout="wide")
 
-# API KEY (Make sure this is valid)
+# API KEY
 GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
 
 # --- 2. CSS: NEON GLOW UI ---
@@ -125,7 +126,12 @@ def main():
                 st.success("✅ Connected via File!")
             elif text_json:
                 st.success("✅ Connected via Text Paste!")
-                st.json(json.loads(text_json) if text_json.strip().startswith("{") else {"status": "Connected"})
+                # AB YEH LINE ERROR NAHI DEGI KYUNKE JSON IMPORTED HAI
+                try:
+                    data = json.loads(text_json)
+                    st.json(data)
+                except:
+                    st.warning("Connected! (Raw Text Mode)")
             else:
                 st.error("Please Upload File or Paste Text")
 
@@ -171,4 +177,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-        
+    
