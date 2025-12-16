@@ -7,11 +7,10 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pytz
 import google.generativeai as genai
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="MOHSIN EMPIRE FAST", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="MOHSIN EMPIRE LIVE", page_icon="⚡", layout="wide")
 
 # API KEY
 GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
@@ -21,22 +20,13 @@ st.markdown("""
     <style>
     .stApp { background-color: #000000 !important; color: white; }
     section[data-testid="stSidebar"] { background-color: #050505; border-right: 1px solid #333; }
-    
-    /* BUTTONS */
     .stButton > button {
         background: linear-gradient(145deg, #111, #1a1a1a) !important;
         color: #00f3ff !important;
         border: 1px solid #333 !important;
-        border-radius: 8px !important;
-        font-weight: bold; width: 100%;
-        transition: 0.3s;
+        width: 100%; font-weight: bold;
     }
-    .stButton > button:hover {
-        box-shadow: 0 0 15px #00f3ff !important; border-color: #00f3ff !important;
-    }
-    
-    /* INPUTS */
-    .stTextInput>div>div>input { background-color: #0a0a0a !important; color: #00f3ff !important; border: 1px solid #333; }
+    .stTextInput>div>div>input { background-color: #0a0a0a !important; color: #00f3ff !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -50,10 +40,9 @@ def hacker_seo(niche, platform):
     except: return "AI Connecting..."
 
 def drive_bot_processor(files, ratio):
-    # --- MAGIC FIX: Import MoviePy ONLY when button is clicked ---
-    # This prevents the "Oven" hang on startup
+    # --- MAGIC TRICK: Import MoviePy ONLY when button is clicked ---
+    # Ye line app ko start hotay waqt hang honay se bachaye gi
     import moviepy.editor as mp 
-    from moviepy.video.VideoClip import TextClip
     
     try:
         clips = []
@@ -137,4 +126,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-        
+            
