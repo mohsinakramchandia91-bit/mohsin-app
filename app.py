@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import time
 import tempfile
-import json  # <--- YEH WOH MISSING LINE THI JO ERROR DE RAHI THI
+import json
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -14,7 +14,9 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 # --- 1. CONFIGURATION ---
-st.set_page_config(page_title="MOHSIN EMPIRE FIXED", page_icon="💎", layout="wide")
+st.set_page_config(page_title="MOHSIN EMPIRE FINAL", page_icon="🚀", layout="wide")
+
+# NOTE: Removed the auto-config block to prevent "Restart Loop"
 
 # API KEY
 GEMINI_KEY = "AIzaSyCORgPGyPfHq24sJGNJ0D-yk0E7Yf13qE0"
@@ -71,6 +73,7 @@ def drive_bot_processor(files, ratio):
             t.write(f.read())
             temps.append(t.name)
             clip = VideoFileClip(t.name)
+            # Safe Resize Logic
             if ratio == "9:16 (Shorts)": clip = clip.resize(height=720)
             else: clip = clip.resize(height=480)
             clips.append(clip)
@@ -117,7 +120,7 @@ def main():
         # Option 1: File
         file_json = st.file_uploader("Option A: Upload JSON File")
         
-        # Option 2: Paste (THE FIX)
+        # Option 2: Paste
         st.write("**OR**")
         text_json = st.text_area("Option B: Paste JSON Content Here (Guaranteed Works)")
         
@@ -126,7 +129,6 @@ def main():
                 st.success("✅ Connected via File!")
             elif text_json:
                 st.success("✅ Connected via Text Paste!")
-                # AB YEH LINE ERROR NAHI DEGI KYUNKE JSON IMPORTED HAI
                 try:
                     data = json.loads(text_json)
                     st.json(data)
